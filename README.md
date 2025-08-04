@@ -1,1 +1,0 @@
-Following instructions from Stanford CS336: Large Language Modeling from Scratch.
