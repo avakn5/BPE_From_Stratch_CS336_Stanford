@@ -15,7 +15,7 @@ def read_file(input_path: str, max_chars: int = 220000) -> str:
         content = file.read(max_chars)  # reads only first max_char characters (prevents overloading memory)
     return content
 
-def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dictionary: dict[tuple[bytes], int]) -> dict[tuple[bytes], int]:
+def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[bytes], int]) -> dict[tuple[bytes], int]:
     
     """
     Returns a new dictionary with the specified pair merged in all words.
@@ -27,7 +27,30 @@ def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dictionary: dict[tup
     Returns:
         A new dictionary with the pair merged in each word where applicable.
     """
-    return dictionary
+
+    new_dict = {}
+    
+    for word, freq in dicti.items() :  
+        newlist = [] # a tuple can't be modified in place so we need to create a list to store the new tuple containing the merged pair.
+        index = 0 
+        
+        while index < len(word)-1 : 
+            string_to_merge = b''.join(pair_to_merge)
+            
+            if ( (word[index], word[ index+1]) == pair_to_merge): # if the pair to merge is contained in the word
+                newlist.append(string_to_merge) #we append to the new list the merged string.
+                index += 2 # we skip 2 characters because we just merged two characters
+
+            else: 
+                newlist.append(word[index]) # we append the characters that are not part of the pair to merge.
+                index += 1 
+                
+        if index == len(word)-1: #handling the last character separately
+            newlist.append(word[index])
+            
+        new_dict[tuple(newlist)] = freq # we store the frequence of the word back to the new dict
+    
+    return new_dict
     
     
 
@@ -43,6 +66,7 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
     Creates: 
         - word_frequency_dict : contains the frequency of each word and is useful to count pair frequencies (which are afterwards stored in the byte_pair_frequency dict). The merged pairs are modified in place inside the word_frequnecy_dict.
         - pair_frequency_dict : temprary helper which contains the frequency of each pair. It is recomputed at each iteration. 
+   
     Returns: 
         - vocab: dict[int, bytes] which contains the tokenizer vocabulary.
         - merges: list[tuple[bytes, bytes]] which contains the list of BPE merges produced from training.
@@ -116,10 +140,11 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
 
         # c) update word_frequency_dict : merge the most frequent typle with a single token. 
         word_frequency_dict = merge_pair_in_dict(most_frequent_tuple, word_frequency_dict)
+        current_vocab_size += 1 
         
         # d) append the merged pair to the merges list.
         merges.append(most_frequent_string)
-        
+
     return vocabulary, merges
 
 # cProfile.run('re.compile("foo|bar")')
