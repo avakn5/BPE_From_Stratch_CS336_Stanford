@@ -2,7 +2,6 @@ from typing import List, Dict, Optional, Union, Tuple, Any
 import regex as re
 from collections import defaultdict
 import cProfile
-from pretokenization_example import find_chunk_boundaries
 
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""" #Pre-tokenization pattern
 
@@ -126,6 +125,8 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
     
     while current_vocab_size < vocab_size:
         
+        # Clear previous counts before recalculating for the current state of word_frequency_dict
+        pair_frequency_dict.clear() 
         # a) compute byte_pair_frequency from word_frequency_dict.
 
         for word in word_frequency_dict:
@@ -143,8 +144,8 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
         current_vocab_size += 1 
         
         # d) append the merged pair to the merges list.
-        merges.append(most_frequent_string)
-
+        merges.append(most_frequent_string)        
+        
     return vocabulary, merges
 
 # cProfile.run('re.compile("foo|bar")')
