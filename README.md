@@ -8,7 +8,7 @@ BPE (Byte-Pair Encoding) is a popular tokenizer adapted to word tokenization by 
 
 The following implementation is trained on TinyStories data.
 
-## Download the TinyStories data and a subsample of OpenWebText
+### Download the TinyStories data and a subsample of OpenWebText
 
 ```
 mkdir -p data
@@ -18,3 +18,13 @@ wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinySto
 wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-valid.txt
 ```
 
+### STEPS to the BPE implementation: 
+
+1- Pre-process the text.
+2- Pretokenize the text.
+3- UTF8 encode each pretoken.
+------- Merging --------------
+4- Split each pretoken into bytes.
+5- count pair frequencies.
+6- merge most frequent pairs.
+7- repeat from step 4 until reached the vocab_size.
