@@ -1,4 +1,4 @@
-# CS336 Spring 2025 Assignment 1: Basics
+# CS336 Spring 2025 Assignment 1: BPE Implementation from Scratch
 
 (Ongoing)
 
