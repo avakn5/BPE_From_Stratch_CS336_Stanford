@@ -4,24 +4,29 @@ from collections import defaultdict
 import cProfile
 from pretokenization_example import find_chunk_boundaries
 
+PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""" #Pre-tokenization pattern
 
 def read_file(input_path: str, max_chars: int = 220000) -> str:
     """Read first max_chars from file
     """
-    with open(input_path, 'r', encoding='utf-8') as file:
+    with open(input_path, 'r') as file:
         content = file.read(max_chars)  # reads only first max_char characters (prevents overloading memory)
     return content
 
 
 def train_bpe(input_path: str, vocab_size: int = 256, special_tokens: list[str] = None, max_iteration: int  = 100) : 
     '''
-    Trains a (byte-level) BPE tokenizer on a text. 
-    Returns: 
-        - Vocab: dict[int, bytes] which contains the tokenizer vocabulary.
-        - Merges: list[tuple[bytes, bytes]] which contains the list of BPE merges produced from training.
-    '''
+    Trains a (byte-level) BPE tokenizer on a text.  
+    
+    Args:
+        - input_path: str Path to a text file with BPE tokenizer training data.
+        - vocab_size: int A positive integer that defines the maximum final vocabulary size (including the initial byte vocabulary, vocabulary items produced from merging, and any special tokens).
+        - special_tokens: list[str] A list of strings to add to the vocabulary. 
 
-    current_vocab_size = 256
+    Returns: 
+        - vocab: dict[int, bytes] which contains the tokenizer vocabulary.
+        - merges: list[tuple[bytes, bytes]] which contains the list of BPE merges produced from training.
+    '''
     
     text_content = read_file(input_path)
     
@@ -41,7 +46,6 @@ def train_bpe(input_path: str, vocab_size: int = 256, special_tokens: list[str] 
 
     # b) utf-8 encoding
     pretokens = []
-    PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""" #Pre-tokenization pattern
     for chunk in chunks:
         pretokens.extend(re.finditer(PAT, chunk)) # convert input text into pre-token
     pretokens = [strings.group(0) for strings in pretokens]
@@ -64,7 +68,7 @@ def train_bpe(input_path: str, vocab_size: int = 256, special_tokens: list[str] 
 
     # b) merge them 
     merges = []
-    sorted_dict = sorted(byte_pair_frequency.items(), key=lambda item: item[1], reverse = True)
+    sorted_dict = sorted(byte_pair_frequency.items(), key=lambda item: item[1], reverse = True) 
 
     #while current_vocab_size < vocab_size
     for i in range(max_iteration): 
@@ -72,7 +76,7 @@ def train_bpe(input_path: str, vocab_size: int = 256, special_tokens: list[str] 
         most_frequent_pair = b''.join(most_frequent_pair) #from tuple to string
         merges.append(most_frequent_pair) 
         current_vocab_size += 1  
-
+         
     # c) constructing the tokenizer vocabulary 
     vocabulary = {} 
     for id in enumerate(merges):
