@@ -20,11 +20,11 @@ wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinySto
 
 ### STEPS to the BPE implementation: 
 
-1- Pre-process the text.
-2- Pretokenize the text.
-3- UTF8 encode each pretoken.
-------- Merging --------------
-4- Split each pretoken into bytes.
-5- count pair frequencies.
-6- merge most frequent pairs.
-7- repeat from step 4 until reached the vocab_size.
+* 1- Pre-process the text.
+* 2- Pretokenize the text.
+* 3- UTF8 encode each pretoken.
+* ------- Merging --------------
+* 4- Split each pretoken into bytes.
+* 5- count pair frequencies.
+* 6- merge most frequent pairs.
+* 7- repeat from step 4 until reached the vocab_size.
