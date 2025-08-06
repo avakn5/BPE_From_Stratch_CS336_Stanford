@@ -76,8 +76,6 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
     if special_tokens is None: 
         special_tokens = ["<|endoftext|>"] 
     
-    current_vocab_size = 256
-
     # STEP 1: removing special characters
     text_content = text_content.lower()
     
@@ -104,7 +102,6 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
 
     #extracting only the pretokens from the regex object
     pretokens = [strings.group(0) for strings in pretokens] 
-
     #encodes each pretoken in utf-8 encoding.
     utf8_encoded = [pretoken.encode("utf-8") for pretoken in pretokens] 
     
@@ -119,32 +116,35 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
             
     # STEP 3: merge the most likely pairs 
     
-    pair_frequency_dict = defaultdict(int) # count pair occurences 
+    # a) initialize the vocabulary
+    vocabulary = {i: bytes([i]) for i in range(256)}
+    for token in special_tokens:
+        vocabulary[len(vocabulary)] = token.encode('utf-8')
+          
     merges = [] # merge them 3
-    vocabulary = {} 
+    pair_frequency_dict = defaultdict(int) # count pair occurences 
     
-    while current_vocab_size < vocab_size:
+    while len(vocabulary) < vocab_size:
         
         # Clear previous counts before recalculating for the current state of word_frequency_dict
         pair_frequency_dict.clear() 
-        # a) compute byte_pair_frequency from word_frequency_dict.
+        # b) compute byte_pair_frequency from word_frequency_dict.
 
         for word in word_frequency_dict:
             for consecutive_byte_pair in zip(word, word[1:]): #looking for every pair of adjacent characters.
                 # adding the pair frequency to the byte_pair_frequency dictionary. 
                 pair_frequency_dict[consecutive_byte_pair] +=  word_frequency_dict[word] #here we get the frequency of each pair across the chunk.
         
-        # b) find the most frequent pair
+        # c) find the most frequent pair
         sorted_dict = sorted(pair_frequency_dict.items(), key=lambda item: item[1], reverse = True) # sort by frequency in descending order
         most_frequent_tuple = sorted_dict[0][0] # fect the most frequent pair
-        most_frequent_string = b''.join(most_frequent_tuple) # merge the most frequent pair to be a string instead of a tuple
 
-        # c) update word_frequency_dict : merge the most frequent typle with a single token. 
+        # d) update word_frequency_dict : merge the most frequent typle with a single token. 
         word_frequency_dict = merge_pair_in_dict(most_frequent_tuple, word_frequency_dict)
-        current_vocab_size += 1 
         
-        # d) append the merged pair to the merges list.
-        merges.append(most_frequent_string)        
+        # e) append the merged pair to the merges list.
+        merges.append(most_frequent_tuple)        
+        vocabulary[len(vocabulary)] = b''.join(most_frequent_tuple)
         
     return vocabulary, merges
 
