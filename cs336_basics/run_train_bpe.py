@@ -14,7 +14,7 @@ def read_file(input_path: str, max_chars: int = 220000) -> str:
         content = file.read(max_chars)  # reads only first max_char characters (prevents overloading memory)
     return content
 
-def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[bytes], int]) -> dict[tuple[bytes], int]:
+def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[bytes], int], special_tokens: list[str]) -> dict[tuple[bytes], int]:
     
     """
     Returns a new dictionary with the specified pair merged in all words.
@@ -30,11 +30,17 @@ def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[b
     new_dict = {}
     
     for word, freq in dicti.items() :  
+        
+        # keep special tokens untouched
+        if b''.join(word) in special_tokens:
+            new_dict[word] = freq
+            continue
+        
         newlist = [] # a tuple can't be modified in place so we need to create a list to store the new tuple containing the merged pair.
         index = 0 
         
         while index < len(word)-1 : 
-            string_to_merge = b''.join(pair_to_merge)
+            string_to_merge = b"".join(pair_to_merge)
             
             if ( (word[index], word[ index+1]) == pair_to_merge): # if the pair to merge is contained in the word
                 newlist.append(string_to_merge) #we append to the new list the merged string.
@@ -51,9 +57,8 @@ def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[b
     
     return new_dict
     
-    
 
-def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None) : 
+def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) : 
     '''
     Trains a (byte-level) BPE tokenizer on any given text. 
     
@@ -72,9 +77,7 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
     '''
     
     text_content = read_file(input_path) 
-    
-    if special_tokens is None: 
-        special_tokens = ["<|endoftext|>"] 
+    special_tokens = [b"<|endoftext|>"]
     
     # STEP 1: removing special characters
     text_content = text_content.lower()
@@ -86,7 +89,7 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
     
     # the special token |<endoftext>| is "escaped" meaning that it is set aside in the tokenization scheme 
     # otherwise  |<>| would be interpreted as a metacharacter, and not used as a text delimiter. 
-    escaped_tokens = [re.escape(token) for token in special_tokens]
+    escaped_tokens = [re.escape(token.decode("utf-8")) for token in special_tokens]
    
     # creates the split pattern  
     split_pattern = "|".join(escaped_tokens)
@@ -118,14 +121,16 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
     
     # a) initialize the vocabulary
     vocabulary = {i: bytes([i]) for i in range(256)}
-    for token in special_tokens:
-        vocabulary[len(vocabulary)] = token.encode('utf-8')
-          
+
+        
+    for token in special_tokens: #special tokens need to be added to the vocabulary
+        vocabulary[len(vocabulary)] = token
+
     merges = [] # merge them 3
     pair_frequency_dict = defaultdict(int) # count pair occurences 
     
     while len(vocabulary) < vocab_size:
-        
+ 
         # Clear previous counts before recalculating for the current state of word_frequency_dict
         pair_frequency_dict.clear() 
         # b) compute byte_pair_frequency from word_frequency_dict.
@@ -134,19 +139,29 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str] = None
             for consecutive_byte_pair in zip(word, word[1:]): #looking for every pair of adjacent characters.
                 # adding the pair frequency to the byte_pair_frequency dictionary. 
                 pair_frequency_dict[consecutive_byte_pair] +=  word_frequency_dict[word] #here we get the frequency of each pair across the chunk.
-        
+               
+        # we need to break this while loop in case of a small text where we would never reach the vocab size.
+        if not pair_frequency_dict:
+            print("No more pairs to merge. Early Stop.")
+            break
+
         # c) find the most frequent pair
         sorted_dict = sorted(pair_frequency_dict.items(), key=lambda item: item[1], reverse = True) # sort by frequency in descending order
         most_frequent_tuple = sorted_dict[0][0] # fect the most frequent pair
 
         # d) update word_frequency_dict : merge the most frequent typle with a single token. 
-        word_frequency_dict = merge_pair_in_dict(most_frequent_tuple, word_frequency_dict)
+        word_frequency_dict = merge_pair_in_dict(most_frequent_tuple, word_frequency_dict, special_tokens)
         
         # e) append the merged pair to the merges list.
-        merges.append(most_frequent_tuple)        
-        vocabulary[len(vocabulary)] = b''.join(most_frequent_tuple)
-        
+        merges.append(most_frequent_tuple)   
+        vocabulary[len(vocabulary)] = b"".join(most_frequent_tuple)
+    
     return vocabulary, merges
 
 # cProfile.run('re.compile("foo|bar")')
-train_bpe("/Users/akouhana/CS336/assignment1-basics/data/TinyStoriesV2-GPT4-train.txt", 500)
+vocab, merges = train("/Users/akouhana/CS336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt", 1000, special_tokens=["<|endoftext|>"])
+
+# Check that the special token is not in the vocab
+vocabs_without_specials = [word for word in vocab.values() if word != b"<|endoftext|>"]
+for word_bytes in vocabs_without_specials:
+        assert b"<|" not in word_bytes
