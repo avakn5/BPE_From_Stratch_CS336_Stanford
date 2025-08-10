@@ -1,23 +1,17 @@
-from typing import List, Dict, Optional, Union, Tuple, Any
 import regex as re
 from collections import defaultdict
-from .pretokenization_example import find_chunk_boundaries
-import cProfile
-import cProfile, pstats, io
+import cProfile, pstats
 
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""" #Pre-tokenization pattern
 PAT_RE = re.compile(PAT)
 
 
 def read_file(input_path: str) -> str:
-   
-    """Read file content
-    """
-   
+    """Read file content."""
     with open(input_path, 'r', encoding= "utf-8") as file:
-       return file.read()  # reads only first max_char characters (prevents overloading memory)
+       return file.read()   
 
-def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[bytes], int], special_tokens_b: list[str]) -> dict[tuple[bytes], int]:
+def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], word_freq_dict : dict[tuple[bytes], int], special_tokens_b: list[bytes]) -> dict[tuple[bytes], int]:
     
     """
     Returns a new dictionary with the specified pair merged in all words.
@@ -32,9 +26,9 @@ def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[b
     first_byte, second_byte = pair_to_merge
     merged_bytes = first_byte + second_byte
     new_dict = {}
-    special_tokens_b = {tuple(token) for token in special_tokens_b}
+    special_tokens_b = {tuple(bytes([b]) for b in token) for token in special_tokens_b}
 
-    for word, freq in dicti.items() :  
+    for word, freq in word_freq_dict.items() :  
         
         # keep special tokens untouched
         if word in special_tokens_b:
@@ -55,7 +49,7 @@ def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[b
                 newlist.append(word[index]) # we append the characters that are not part of the pair to merge.
                 index += 1 
                 
-        if index == len(word)-1: #handling the last character separately
+        if index == n-1: #handling the last character separately
             newlist.append(word[index])
             
         new_dict[tuple(newlist)] = freq # we store the frequence of the word back to the new dict
@@ -124,30 +118,25 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
     
     # a) initialize the vocabulary
     vocabulary = {i: bytes([i]) for i in range(256)}
-        
-            
-    for k, v in list(vocabulary.items()):
-        if isinstance(v, int):
-                vocabulary[k] = bytes([v])
-                
+
     for tok in special_tokens_b:
         if tok not in vocabulary.values():
                 vocabulary[len(vocabulary)] = tok        
         
-    merges = [] # merge them 3
+    merges = [] 
     pair_frequency_dict = defaultdict(int) # count pair occurences 
     
     while len(vocabulary) < vocab_size:
  
         # Clear previous counts before recalculating for the current state of word_frequency_dict
         pair_frequency_dict.clear() 
-        # b) compute byte_pair_frequency from word_frequency_dict.
-
-        for word in word_frequency_dict:
-            for consecutive_byte_pair in zip(word, word[1:]): #looking for every pair of adjacent characters.
+        
+        # b) compute byte_pair_frequency from word_frequency_dict.      
+        for word, freq in word_frequency_dict.items(): #looking for every pair of adjacent characters.
+            for consecutive_byte_pair in zip(word, word[1:]):
                 # adding the pair frequency to the byte_pair_frequency dictionary. 
-                pair_frequency_dict[consecutive_byte_pair] +=  word_frequency_dict[word] #here we get the frequency of each pair across the chunk.
-               
+                pair_frequency_dict[consecutive_byte_pair] += freq  #here we get the frequency of each pair across the chunk.
+            
         # we need to break this while loop in case of a small text where we would never reach the vocab size.
         if not pair_frequency_dict:
             print("No more pairs to merge. Early Stop.")
@@ -165,6 +154,7 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
                  
     return vocabulary, merges
 
-pr = cProfile.Profile() # profile code's efficiency
-pr.runcall(train, "/Users/akouhana/CS336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt", 1000, ["<|endoftext|>"])
-pstats.Stats(pr).sort_stats("cumtime").print_stats(30)
+if __name__ == "__main__":
+    pr = cProfile.Profile() # profile code's efficiency
+    pr.runcall(train, "/Users/akouhana/CS336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt", 1000, ["<|endoftext|>"])
+    pstats.Stats(pr).sort_stats("cumtime").print_stats(30)
