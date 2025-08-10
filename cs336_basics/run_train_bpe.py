@@ -8,6 +8,7 @@ import cProfile, pstats, io
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""" #Pre-tokenization pattern
 PAT_RE = re.compile(PAT)
 
+
 def read_file(input_path: str) -> str:
    
     """Read file content
