@@ -5,13 +5,13 @@ import cProfile
 
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""" #Pre-tokenization pattern
 
-def read_file(input_path: str, max_chars: int = 220000) -> str:
+def read_file(input_path: str) -> str:
    
     """Read first max_chars from file
     """
    
     with open(input_path, 'r', encoding= "utf-8") as file:
-       return file.read(max_chars)  # reads only first max_char characters (prevents overloading memory)
+       return file.read()  # reads only first max_char characters (prevents overloading memory)
 
 def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[bytes], int], special_tokens_b: list[str]) -> dict[tuple[bytes], int]:
     
@@ -123,8 +123,8 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
     # a) initialize the vocabulary
     vocabulary = {i: bytes([i]) for i in range(256)}
         
-    for token in special_tokens_b: #special tokens need to be added to the vocabulary
-        vocabulary[len(vocabulary)] = token
+    # for token in special_tokens_b: #special tokens need to be added to the vocabulary
+    #     vocabulary[len(vocabulary)] = token
 
     merges = [] # merge them 3
     pair_frequency_dict = defaultdict(int) # count pair occurences 
@@ -164,6 +164,11 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
         for k, v in list(vocabulary.items()):
             if isinstance(v, int):
                 vocabulary[k] = bytes([v])
+                
+        for tok in special_tokens_b:
+            if tok not in vocabulary.values():
+                vocabulary[len(vocabulary)] = tok        
+                 
     return vocabulary, merges
 
 
