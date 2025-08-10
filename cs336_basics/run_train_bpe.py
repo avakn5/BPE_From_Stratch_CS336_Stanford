@@ -11,10 +11,9 @@ def read_file(input_path: str, max_chars: int = 220000) -> str:
     """
    
     with open(input_path, 'r', encoding= "utf-8") as file:
-        content = file.read(max_chars)  # reads only first max_char characters (prevents overloading memory)
-    return content
+       return file.read(max_chars)  # reads only first max_char characters (prevents overloading memory)
 
-def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[bytes], int], special_tokens: list[str]) -> dict[tuple[bytes], int]:
+def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[bytes], int], special_tokens_b: list[str]) -> dict[tuple[bytes], int]:
     
     """
     Returns a new dictionary with the specified pair merged in all words.
@@ -28,11 +27,11 @@ def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[b
     """
 
     new_dict = {}
-    
+
     for word, freq in dicti.items() :  
         
         # keep special tokens untouched
-        if b''.join(word) in special_tokens:
+        if b''.join(word) in special_tokens_b:
             new_dict[word] = freq
             continue
         
@@ -42,7 +41,7 @@ def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[b
         while index < len(word)-1 : 
             string_to_merge = b"".join(pair_to_merge)
             
-            if ( (word[index], word[ index+1]) == pair_to_merge): # if the pair to merge is contained in the word
+            if ( (word[index], word[ index+1] ) == pair_to_merge): # if the pair to merge is contained in the word
                 newlist.append(string_to_merge) #we append to the new list the merged string.
                 index += 2 # we skip 2 characters because we just merged two characters
 
@@ -77,26 +76,28 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
     '''
     
     text_content = read_file(input_path) 
-    special_tokens = [b"<|endoftext|>"]
-    
-    # STEP 1: removing special characters
-    text_content = text_content.lower()
+        
+    special_tokens = special_tokens or []
+    special_tokens_b = [t.encode("utf-8") if isinstance(t, str) else t for t in special_tokens]
+        
     
     #substitutes special characters with space in the text_content
-    cleaned_text = re.sub(r'[!@#$\^*]', ' ', text_content) 
-    
+    # cleaned_text = re.sub(r'[!#&$\^*]', '', text_content)
+
     # STEP 2: pre-tokenize : split text into chunks
     
     # the special token |<endoftext>| is "escaped" meaning that it is set aside in the tokenization scheme 
     # otherwise  |<>| would be interpreted as a metacharacter, and not used as a text delimiter. 
-    escaped_tokens = [re.escape(token.decode("utf-8")) for token in special_tokens]
-   
-    # creates the split pattern  
-    split_pattern = "|".join(escaped_tokens)
-    
-    # re.split() breaks the text at each occurrence of the pattern
-    chunks = re.split(split_pattern, cleaned_text) 
-    
+        
+    escaped_tokens = [re.escape(tok.decode("utf-8")) for tok in special_tokens_b]
+    if escaped_tokens:
+        # creates the split pattern  
+        split_pattern = "|".join(escaped_tokens)
+        # re.split() breaks the text at each occurrence of the pattern
+        chunks = re.split(split_pattern, text_content)
+    else:
+        chunks = [text_content]
+        
     # b) utf-8 encoding
     pretokens = []
     for chunk in chunks:
@@ -121,9 +122,8 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
     
     # a) initialize the vocabulary
     vocabulary = {i: bytes([i]) for i in range(256)}
-
         
-    for token in special_tokens: #special tokens need to be added to the vocabulary
+    for token in special_tokens_b: #special tokens need to be added to the vocabulary
         vocabulary[len(vocabulary)] = token
 
     merges = [] # merge them 3
@@ -146,22 +146,26 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
             break
 
         # c) find the most frequent pair
-        sorted_dict = sorted(pair_frequency_dict.items(), key=lambda item: item[1], reverse = True) # sort by frequency in descending order
+        # sorted_dict = sorted(pair_frequency_dict.items(), key=lambda item: item[1], reverse = True) # sort by frequency in descending order
+        sorted_dict = sorted(
+           pair_frequency_dict.items(),            
+           key=lambda item: (item[1], item[0]),   # (count, pair)
+           reverse=True                            # highest count, then highest pair
+        )
         most_frequent_tuple = sorted_dict[0][0] # fect the most frequent pair
 
         # d) update word_frequency_dict : merge the most frequent typle with a single token. 
-        word_frequency_dict = merge_pair_in_dict(most_frequent_tuple, word_frequency_dict, special_tokens)
+        word_frequency_dict = merge_pair_in_dict(most_frequent_tuple, word_frequency_dict, special_tokens_b)
         
         # e) append the merged pair to the merges list.
         merges.append(most_frequent_tuple)   
         vocabulary[len(vocabulary)] = b"".join(most_frequent_tuple)
-    
+        
+        for k, v in list(vocabulary.items()):
+            if isinstance(v, int):
+                vocabulary[k] = bytes([v])
     return vocabulary, merges
 
-# cProfile.run('re.compile("foo|bar")')
-vocab, merges = train("/Users/akouhana/CS336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt", 1000, special_tokens=["<|endoftext|>"])
 
-# Check that the special token is not in the vocab
-vocabs_without_specials = [word for word in vocab.values() if word != b"<|endoftext|>"]
-for word_bytes in vocabs_without_specials:
-        assert b"<|" not in word_bytes
+# cProfile.run('re.compile("foo|bar")')
+train("/Users/akouhana/CS336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt", 1000, special_tokens=["<|endoftext|>"])
