@@ -28,3 +28,6 @@ wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinySto
 * 5- count pair frequencies.
 * 6- merge most frequent pairs.
 * 7- repeat from step 4 until reached the vocab_size.
+
+### TO DO : 
+* Implement encoder and decoder
