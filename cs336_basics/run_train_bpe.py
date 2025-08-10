@@ -1,13 +1,16 @@
 from typing import List, Dict, Optional, Union, Tuple, Any
 import regex as re
 from collections import defaultdict
+from .pretokenization_example import find_chunk_boundaries
 import cProfile
+import cProfile, pstats, io
 
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""" #Pre-tokenization pattern
+PAT_RE = re.compile(PAT)
 
 def read_file(input_path: str) -> str:
    
-    """Read first max_chars from file
+    """Read file content
     """
    
     with open(input_path, 'r', encoding= "utf-8") as file:
@@ -24,25 +27,27 @@ def merge_pair_in_dict( pair_to_merge: tuple[bytes, bytes], dicti : dict[tuple[b
 
     Returns:
         A new dictionary with the pair merged in each word where applicable.
-    """
-
+        """
+    first_byte, second_byte = pair_to_merge
+    merged_bytes = first_byte + second_byte
     new_dict = {}
+    special_tokens_b = {tuple(token) for token in special_tokens_b}
 
     for word, freq in dicti.items() :  
         
         # keep special tokens untouched
-        if b''.join(word) in special_tokens_b:
+        if word in special_tokens_b:
             new_dict[word] = freq
             continue
         
         newlist = [] # a tuple can't be modified in place so we need to create a list to store the new tuple containing the merged pair.
         index = 0 
+        n = len(word)
         
-        while index < len(word)-1 : 
-            string_to_merge = b"".join(pair_to_merge)
+        while index < n-1 : 
             
             if ( (word[index], word[ index+1] ) == pair_to_merge): # if the pair to merge is contained in the word
-                newlist.append(string_to_merge) #we append to the new list the merged string.
+                newlist.append(merged_bytes) #we append to the new list the merged string.
                 index += 2 # we skip 2 characters because we just merged two characters
 
             else: 
@@ -76,20 +81,16 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
     '''
     
     text_content = read_file(input_path) 
-        
-    special_tokens = special_tokens or []
-    special_tokens_b = [t.encode("utf-8") if isinstance(t, str) else t for t in special_tokens]
-        
     
-    #substitutes special characters with space in the text_content
-    # cleaned_text = re.sub(r'[!#&$\^*]', '', text_content)
-
+    # STEP 1: special tokens encoding
+    special_tokens = special_tokens or []
+    special_tokens_b = [t.encode("utf-8") if isinstance(t, str) else t for t in special_tokens] # encode the special tokens
+        
     # STEP 2: pre-tokenize : split text into chunks
     
-    # the special token |<endoftext>| is "escaped" meaning that it is set aside in the tokenization scheme 
-    # otherwise  |<>| would be interpreted as a metacharacter, and not used as a text delimiter. 
-        
-    escaped_tokens = [re.escape(tok.decode("utf-8")) for tok in special_tokens_b]
+    # the special token |<endoftext>| is "escaped" meaning that it is set aside in the tokenization scheme         
+    escaped_tokens = [re.escape(tok.decode("utf-8")) for tok in special_tokens_b]   # otherwise  |<>| would be interpreted as a metacharacter, and not used as a text delimiter. 
+
     if escaped_tokens:
         # creates the split pattern  
         split_pattern = "|".join(escaped_tokens)
@@ -102,7 +103,7 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
     pretokens = []
     for chunk in chunks:
         #chunks are pre-tokenized (using PAT, the pre-tokenization pattern), and added to the end of the list pretokens.
-        pretokens.extend(re.finditer(PAT, chunk)) 
+        pretokens.extend(re.finditer(PAT_RE, chunk)) 
 
     #extracting only the pretokens from the regex object
     pretokens = [strings.group(0) for strings in pretokens] 
@@ -123,9 +124,15 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
     # a) initialize the vocabulary
     vocabulary = {i: bytes([i]) for i in range(256)}
         
-    # for token in special_tokens_b: #special tokens need to be added to the vocabulary
-    #     vocabulary[len(vocabulary)] = token
-
+            
+    for k, v in list(vocabulary.items()):
+        if isinstance(v, int):
+                vocabulary[k] = bytes([v])
+                
+    for tok in special_tokens_b:
+        if tok not in vocabulary.values():
+                vocabulary[len(vocabulary)] = tok        
+        
     merges = [] # merge them 3
     pair_frequency_dict = defaultdict(int) # count pair occurences 
     
@@ -146,13 +153,7 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
             break
 
         # c) find the most frequent pair
-        # sorted_dict = sorted(pair_frequency_dict.items(), key=lambda item: item[1], reverse = True) # sort by frequency in descending order
-        sorted_dict = sorted(
-           pair_frequency_dict.items(),            
-           key=lambda item: (item[1], item[0]),   # (count, pair)
-           reverse=True                            # highest count, then highest pair
-        )
-        most_frequent_tuple = sorted_dict[0][0] # fect the most frequent pair
+        most_frequent_tuple = max(pair_frequency_dict.items(), key=lambda item: (item[1], item[0]))[0] #highest count, then highest pair
 
         # d) update word_frequency_dict : merge the most frequent typle with a single token. 
         word_frequency_dict = merge_pair_in_dict(most_frequent_tuple, word_frequency_dict, special_tokens_b)
@@ -160,17 +161,9 @@ def train(input_path: str, vocab_size: int, special_tokens: list[str] = None) :
         # e) append the merged pair to the merges list.
         merges.append(most_frequent_tuple)   
         vocabulary[len(vocabulary)] = b"".join(most_frequent_tuple)
-        
-        for k, v in list(vocabulary.items()):
-            if isinstance(v, int):
-                vocabulary[k] = bytes([v])
-                
-        for tok in special_tokens_b:
-            if tok not in vocabulary.values():
-                vocabulary[len(vocabulary)] = tok        
                  
     return vocabulary, merges
 
-
-# cProfile.run('re.compile("foo|bar")')
-train("/Users/akouhana/CS336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt", 1000, special_tokens=["<|endoftext|>"])
+pr = cProfile.Profile() # profile code's efficiency
+pr.runcall(train, "/Users/akouhana/CS336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt", 1000, ["<|endoftext|>"])
+pstats.Stats(pr).sort_stats("cumtime").print_stats(30)

@@ -591,9 +591,6 @@ def run_train_bpe(
                 representing that <token1> was merged with <token2>.
                 Merges are ordered by order of creation.
     """
-        
-    vocab, merges = train(str(input_path), vocab_size, special_tokens)
-
-    id_to_token = {idx: token for idx, token in enumerate(vocab)}
-
-    return id_to_token, merges
+            
+    vocab, merges = train(input_path=input_path, vocab_size=vocab_size, special_tokens=special_tokens)
+    return vocab, merges
