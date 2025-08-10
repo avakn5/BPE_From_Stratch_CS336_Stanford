@@ -1,8 +1,6 @@
 # CS336 Spring 2025 Assignment 1: BPE Implementation from Scratch
 
-(Ongoing)
-
-Personal implementation of a BPE from scratch, following the assignment handout at cs336_spring2025_assignment1_basics.pdf
+Personal implementation/solution of a BPE from scratch, following the assignment handout at cs336_spring2025_assignment1_basics.pdf
 
 BPE (Byte-Pair Encoding) is a popular tokenizer adapted to word tokenization by "Neural Machine Translation of Rare Words with Subword Units". It is a data compression technique that iteratively replaces the most frequent pair of characters in a sequence with a single, unused byte. 
 
