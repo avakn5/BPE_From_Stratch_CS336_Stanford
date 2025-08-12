@@ -21,69 +21,103 @@ class BPE_Tokenizer():
     def encode(self, text: str) -> list[int] : 
         '''Encode an input text into a sequence of token IDs. 
         For the encoder you don't need to build a work frequency dict. Every computation is done at the word-level.'''
+        
         list_integer = []
-
-        # STEP 1: Pre-tokenize the sequence
-        pretokenize = list(re.finditer(PAT_RE, text))  
-
-        # STEP 2: represent each token as a UTF-8 bytes. 
-        utf8_bytes = [m.group(0).encode("utf-8") for m in pretokenize]
-        
-        # STEP 3: create a rank dict
-        '''the pair with the best (lowest) rank in the merges list). 
-        Why the lowest ? because that’s the one that would have been merged first during training, and the encoding reproduces the trainiing process.
-        The merging doewsn't happen from left to right but by the pair with the lowest rank first.
-        Let's create a rank dict for elements in merge: rank_dict contains the rank of each element in merges'''
-        
-        rank_dict = {pair: r for r, pair in enumerate(self.merges)}
-
-        #STEP 4 : identify the first applicable merge 
-        for encoded in utf8_bytes:
-            chunks = [bytes([b]) for b in encoded]
-           
-            while True:
-                best_pair_tuple = None        
-                best_rank = float("inf")
-                
-            # STEP 5: Fetch the next merge: greedy by rank.
-                # encoded_as_tuple = tuple(bytes([byte]) for byte in encoded)
-                for consecutive_byte_pair in zip(chunks, chunks[1:]):        
-                    rank = rank_dict.get(consecutive_byte_pair)
-                    if rank is not None and rank < best_rank:
-                        best_pair_tuple = consecutive_byte_pair
-                        best_rank = rank
             
-                if best_pair_tuple is None:
-                    break 
+        
+        # Handle special tokens first
+        segments = []
+        if self.special_tokens:
+            # Sort special tokens by length (longest first) to ensure longest match wins
+            specials_sorted = sorted(self.special_tokens, key=len, reverse=True)
+            # Create regex pattern that matches any special token
+            pattern = "|".join(re.escape(token) for token in specials_sorted)
+            regex = re.compile(pattern)
+            
+            # Split text by special tokens while preserving the special tokens
+            last_end = 0
+            for match in regex.finditer(text):
+                # Add text before the special token
+                if match.start() > last_end:
+                    segments.append(text[last_end:match.start()])
+                # Add the special token
+                segments.append(match.group())
+                last_end = match.end()
+            
+            # Add remaining text after last special token
+            if last_end < len(text):
+                segments.append(text[last_end:])
+        else:
+            segments = [text]
+        
+        for seg in segments: 
+            if seg in self.special_tokens:
+                list_integer.append(self.rev_vocab[seg.encode("utf-8")])
+                continue
+          
+            # STEP 1: Pre-tokenize the sequence
+            pretokenize = list(re.finditer(PAT_RE, seg))  
+
+            # STEP 2: represent each token as a UTF-8 bytes. 
+            utf8_bytes = [m.group(0).encode("utf-8") for m in pretokenize]
+            
+            # STEP 3: create a rank dict
+            '''the pair with the best (lowest) rank in the merges list). 
+            Why the lowest ? because that’s the one that would have been merged first during training, and the encoding reproduces the trainiing process.
+            The merging doewsn't happen from left to right but by the pair with the lowest rank first.
+            Let's create a rank dict for elements in merge: rank_dict contains the rank of each element in merges'''
+            
+            rank_dict = {pair: r for r, pair in enumerate(self.merges)}
+
+            #STEP 4 : identify the first applicable merge 
+            for encoded in utf8_bytes:
+                chunks = [bytes([b]) for b in encoded]
+            
+                while True:
+                    best_pair_tuple = None        
+                    best_rank = float("inf")
                     
-                merged = []
-                index = 0
-                changed = False
-
-                while index < len(chunks):
-                    if index + 1 < len(chunks) and chunks[index] == best_pair_tuple[0] and chunks[index + 1] == best_pair_tuple[1]:
-                        merged.append(chunks[index] + chunks[index + 1])
-                        index += 2
-                        changed = True
-                    else:
-                        merged.append(chunks[index])
-                        index += 1
-                        
-                if not changed:
-                    break  
+                # STEP 5: Fetch the next merge: greedy by rank.
+                    # encoded_as_tuple = tuple(bytes([byte]) for byte in encoded)
+                    for consecutive_byte_pair in zip(chunks, chunks[1:]):        
+                        rank = rank_dict.get(consecutive_byte_pair)
+                        if rank is not None and rank < best_rank:
+                            best_pair_tuple = consecutive_byte_pair
+                            best_rank = rank
                 
-                chunks = merged
-            
-            for element in chunks:  
-                list_integer.append(self.rev_vocab[element])  
-        print(list_integer)
+                    if best_pair_tuple is None:
+                        break 
+                        
+                    merged = []
+                    index = 0
+                    changed = False
+
+                    while index < len(chunks):
+                        if index + 1 < len(chunks) and chunks[index] == best_pair_tuple[0] and chunks[index + 1] == best_pair_tuple[1]:
+                            merged.append(chunks[index] + chunks[index + 1])
+                            index += 2
+                            changed = True
+                        else:
+                            merged.append(chunks[index])
+                            index += 1
+                            
+                    if not changed:
+                        break  
+                    
+                    chunks = merged
+                
+                for element in chunks:  
+                    list_integer.append(self.rev_vocab[element])  
+
         return list_integer
     
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int] :    
         '''Given an iterable of strings (e.g., a Python file handle), return a generator that lazily yields token IDs.
         This is required for memory-eﬀicient tokenization of large files that we cannot directly load into memory.'''     
-        pass 
-    
+        for chunk in iterable:
+            for token_id in self.encode(chunk):
+                 yield token_id
+                 
     def decode(self, ids: list[int]) -> str : 
         '''Decode a sequence of token IDs into text.'''
         list_bytes = []
@@ -110,5 +144,6 @@ if __name__ == "__main__":
     vocab, merges = bpe.train("/Users/akouhana/CS336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt", vocab_size=1000)
     tokenizer = BPE_Tokenizer(vocab=vocab, merges=merges, special_tokens=["<|endoftext|>"])
     tokenizer.encode("Coding BPE from scratch was fun.")
+    tokenizer.encode_iterable("Coding BPE is meh.")
     tokenizer.decode([89, 289, 298, 302, 452, 422, 767, 642, 111, 120])
     
