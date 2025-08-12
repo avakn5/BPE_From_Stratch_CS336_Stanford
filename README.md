@@ -16,6 +16,11 @@ cd data
 
 wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-train.txt
 wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-valid.txt
+
+wget https://huggingface.co/datasets/stanford-cs336/owt-sample/resolve/main/owt_train.txt.gz
+gunzip owt_train.txt.gz
+wget https://huggingface.co/datasets/stanford-cs336/owt-sample/resolve/main/owt_valid.txt.gz
+gunzip owt_valid.txt.gz
 ```
 
 ### STEPS to the BPE implementation: 
@@ -29,5 +34,6 @@ wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinySto
 * 6- merge most frequent pairs.
 * 7- repeat from step 4 until reached the vocab_size.
 
-### TO DO : 
-* Implement encoder and decoder
+Done: 
+* Implemented BPE training.
+* Implemented encoder and decoder.
