@@ -34,6 +34,6 @@ gunzip owt_valid.txt.gz
 * 6- merge most frequent pairs.
 * 7- repeat from step 4 until reached the vocab_size.
 
-Done: 
+### Done: 
 * Implemented BPE training.
 * Implemented encoder and decoder.
