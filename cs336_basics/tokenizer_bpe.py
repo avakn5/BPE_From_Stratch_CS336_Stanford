@@ -23,32 +23,37 @@ class BPE_Tokenizer():
         For the encoder you don't need to build a work frequency dict. Every computation is done at the word-level.'''
         
         list_integer = []
-            
         
         # Handle special tokens first
+        # Handle special tokens first (leftmost-longest, no backtracking)
+       
+       # --- LEFTMOST-LONGEST special split (no regex) ---
         segments = []
         if self.special_tokens:
-            # Sort special tokens by length (longest first) to ensure longest match wins
-            specials_sorted = sorted(self.special_tokens, key=len, reverse=True)
-            # Create regex pattern that matches any special token
-            pattern = "|".join(re.escape(token) for token in specials_sorted)
-            regex = re.compile(pattern)
-            
-            # Split text by special tokens while preserving the special tokens
-            last_end = 0
-            for match in regex.finditer(text):
-                # Add text before the special token
-                if match.start() > last_end:
-                    segments.append(text[last_end:match.start()])
-                # Add the special token
-                segments.append(match.group())
-                last_end = match.end()
-            
-            # Add remaining text after last special token
-            if last_end < len(text):
-                segments.append(text[last_end:])
+            specials_sorted = sorted(set(self.special_tokens), key=len, reverse=True)
+            specials_set = set(self.special_tokens)
+            n, i, last = len(text), 0, 0
+            while i < n:
+                hit = None
+                # longest-first: the first startswith that hits wins
+                for tok in specials_sorted:
+                    if text.startswith(tok, i):
+                        hit = tok
+                        break
+                if hit is None:
+                    i += 1
+                    continue
+                if i > last:
+                    segments.append(text[last:i])   # plain text before the special
+                segments.append(hit)                # the special itself as ONE segment
+                i += len(hit)
+                last = i
+            if last < n:
+                segments.append(text[last:])
         else:
             segments = [text]
+
+
         
         for seg in segments: 
             if seg in self.special_tokens:
@@ -129,15 +134,10 @@ class BPE_Tokenizer():
         string = b"".join(list_bytes)
         return string.decode("utf-8", errors="replace")
 
-    
-    def from_files(cls, vocab_filepath : str, merges_filepath: str, special_tokenss: list[str] | None = None): 
-        '''Class method that constructs and return a Tokenizer from a serialized vocabulary and list of merges.'''
-        with open(vocab_filepath, "rb") as f:
-             vocab = pickle.load(f)
-        with open(merges_filepath, "rb") as f:
-            merges = pickle.load(f)
+    def from_files(cls, vocab_filepath: str, merges_filepath: str, special_tokens: list[str] | None = None):
+        with open(vocab_filepath, "rb") as f: vocab = pickle.load(f)
+        with open(merges_filepath, "rb") as f: merges = pickle.load(f)
         return cls(vocab, merges, special_tokens)
-        
 
 if __name__ == "__main__":
     bpe = BPE(special_tokens=["<|endoftext|>"])
