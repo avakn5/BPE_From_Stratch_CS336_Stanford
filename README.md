@@ -1,12 +1,10 @@
 # CS336 Spring 2025 Assignment 1: BPE Implementation from Scratch
 
-Personal implementation/solution of a BPE from scratch, following the assignment handout at cs336_spring2025_assignment1_basics.pdf
+This repository contains my implementation of Byte Pair Encoding (BPE) from scratch for CS336 — Spring 2025 Assignment 1, based on the provided assignment handout (cs336_spring2025_assignment1_basics.pdf).
 
-BPE (Byte-Pair Encoding) is a popular tokenizer adapted to word tokenization by "Neural Machine Translation of Rare Words with Subword Units". It is a data compression technique that iteratively replaces the most frequent pair of characters in a sequence with a single, unused byte. 
+Byte Pair Encoding is a subword tokenization algorithm originally adapted for NLP by Sennrich et al., Neural Machine Translation of Rare Words with Subword Units (2016). It works by iteratively replacing the most frequent pair of symbols in the text with a new symbol, effectively building a vocabulary that balances character-level and word-level representations.
 
-The following implementation is trained on TinyStories data.
-
-Comments useful to comprehension were voluntarily kept in the repo.
+** The codebase includes extensive inline comments to aid understanding of the BPE implementation. **
 
 ### Download the TinyStories data and a subsample of OpenWebText
 
@@ -34,6 +32,11 @@ gunzip owt_valid.txt.gz
 * 6- merge most frequent pairs.
 * 7- repeat from step 4 until reached the vocab_size.
 
-### Done: 
-* Implemented BPE training.
-* Implemented encoder and decoder.
+### Implemented Features:
+
+* BPE training procedure.
+* Encoder (text → token IDs).
+* Decoder (token IDs → text).
+* Passing all assignment tests:
+** BPE training: 3/3 tests passed
+** Tokenizer: 23/23 tests passed
