@@ -6,7 +6,7 @@ Byte Pair Encoding is a subword tokenization algorithm originally adapted for NL
 
 __The codebase includes extensive inline comments to aid understanding of the BPE implementation.__
 
-![Transformer Architecture](/Users/akouhana/CS336/assignment1-basics/cs336_basics/bpe_project/figure/architecture.jpeg)
+![Transformer Architecture](/Users/akouhana/CS336/assignment1-basics/cs336_basics/figure/architecture.jpeg)
 
 ### Download the TinyStories data and a subsample of OpenWebText
 
