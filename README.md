@@ -40,4 +40,3 @@ gunzip owt_valid.txt.gz
 * Passing all assignment tests:
 &nbsp;BPE training: 3/3 tests passed
 &nbsp; Tokenizer: 23/23 tests passed
-# Transformer-from-Scratch-CS336-Stanford-
