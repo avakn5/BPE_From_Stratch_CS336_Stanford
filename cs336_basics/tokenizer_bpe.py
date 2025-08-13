@@ -23,33 +23,14 @@ class BPE_Tokenizer():
         For the encoder you don't need to build a work frequency dict. Every computation is done at the word-level.'''
         
         list_integer = []
-        
-        # Handle special tokens first
-        # Handle special tokens first (leftmost-longest, no backtracking)
-       
-       # --- LEFTMOST-LONGEST special split (no regex) ---
+    
         segments = []
+        # similar code segmentation than the training BPE implementation.
         if self.special_tokens:
-            specials_sorted = sorted(set(self.special_tokens), key=len, reverse=True)
-            specials_set = set(self.special_tokens)
-            n, i, last = len(text), 0, 0
-            while i < n:
-                hit = None
-                # longest-first: the first startswith that hits wins
-                for tok in specials_sorted:
-                    if text.startswith(tok, i):
-                        hit = tok
-                        break
-                if hit is None:
-                    i += 1
-                    continue
-                if i > last:
-                    segments.append(text[last:i])   # plain text before the special
-                segments.append(hit)                # the special itself as ONE segment
-                i += len(hit)
-                last = i
-            if last < n:
-                segments.append(text[last:])
+            special_re = re.compile("(?V1)(" + "|".join(
+                re.escape(s) for s in sorted(set(self.special_tokens), key=len, reverse=True)
+            ) + ")")
+            segments = [s for s in special_re.split(text) if s]   
         else:
             segments = [text]
         
@@ -81,7 +62,6 @@ class BPE_Tokenizer():
                     best_rank = float("inf")
                     
                 # STEP 5: Fetch the next merge: greedy by rank.
-                    # encoded_as_tuple = tuple(bytes([byte]) for byte in encoded)
                     for consecutive_byte_pair in zip(chunks, chunks[1:]):        
                         rank = rank_dict.get(consecutive_byte_pair)
                         if rank is not None and rank < best_rank:
@@ -95,6 +75,7 @@ class BPE_Tokenizer():
                     index = 0
                     changed = False
 
+                    #same principle as BPE training
                     while index < len(chunks):
                         if index + 1 < len(chunks) and chunks[index] == best_pair_tuple[0] and chunks[index + 1] == best_pair_tuple[1]:
                             merged.append(chunks[index] + chunks[index + 1])
@@ -119,7 +100,7 @@ class BPE_Tokenizer():
         This is required for memory-eﬀicient tokenization of large files that we cannot directly load into memory.'''     
         for chunk in iterable:
             for token_id in self.encode(chunk):
-                 yield token_id
+                yield token_id
                  
     def decode(self, ids: list[int]) -> str : 
         '''Decode a sequence of token IDs into text.'''
@@ -144,4 +125,3 @@ if __name__ == "__main__":
     tokenizer.encode("Coding BPE from scratch was fun.")
     tokenizer.encode_iterable("Coding BPE is meh.")
     tokenizer.decode([89, 289, 298, 302, 452, 422, 767, 642, 111, 120])
-    

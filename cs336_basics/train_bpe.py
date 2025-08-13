@@ -12,13 +12,7 @@ class BPE():
         self.special_tokens = special_tokens or []
         self.vocabulary: dict[int, bytes] = {}
         self.merges: list[tuple[bytes, bytes]] = []
-   
-        
-    # def read_file_max_char(self, input_path: str,max_chars: int) -> str:
-    #     """Read file content."""
-    #     with open(input_path, 'r', encoding= "utf-8") as file:
-    #         return file.read(max_chars)   
-    
+
     def read_file(self, input_path: str) -> str:
         """Read file content."""
         with open(input_path, 'r', encoding= "utf-8") as file:
@@ -30,7 +24,7 @@ class BPE():
         Returns a new dictionary with the specified pair merged in all words.
 
         Args:
-            pair_to_merge: The byte pair to merge (e.g., (b't', b'h')).
+            pair_to_merge: The byte pair to merge (e.g., (b't', b'a')).
             word_freq_dict: A dictionary mapping words (tuples of bytes) to frequencies.
 
         Returns:
@@ -62,7 +56,7 @@ class BPE():
                     newlist.append(word[index]) # we append the characters that are not part of the pair to merge.
                     index += 1 
                     
-            if index == n-1: #handling the last character separately
+            if index == n-1: #we handle the last character separately
                 newlist.append(word[index])
                 
             new_dict[tuple(newlist)] = freq # we store the frequence of the word back to the new dict
@@ -106,7 +100,7 @@ class BPE():
         else:
             chunks = [text_content]
             
-        # b) utf-8 encoding
+        # a) utf-8 encoding
         pretokens = []
         for chunk in chunks:
             #chunks are pre-tokenized (using PAT, the pre-tokenization pattern), and added to the end of the list pretokens.
@@ -117,7 +111,7 @@ class BPE():
         #encodes each pretoken in utf-8 encoding.
         utf8_encoded = [pretoken.encode("utf-8") for pretoken in pretokens] 
         
-        # c) creating the word frequency dict
+        # b) create the word frequency dict
         
         word_frequency_dict = {}    #  count word occurences
         for word in utf8_encoded: 
