@@ -4,7 +4,7 @@ This repository contains my implementation of Byte Pair Encoding (BPE) from scra
 
 Byte Pair Encoding is a subword tokenization algorithm originally adapted for NLP by Sennrich et al., Neural Machine Translation of Rare Words with Subword Units (2016). It works by iteratively replacing the most frequent pair of symbols in the text with a new symbol, effectively building a vocabulary that balances character-level and word-level representations.
 
-** The codebase includes extensive inline comments to aid understanding of the BPE implementation. **
+__The codebase includes extensive inline comments to aid understanding of the BPE implementation.__
 
 ### Download the TinyStories data and a subsample of OpenWebText
 
