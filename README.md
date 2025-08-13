@@ -10,3 +10,6 @@ __The codebase will include extensive inline comments to aid understanding of th
 
 
 ### Implemented Features:
+
+
+![Transformer Architecture](assets/architecture.png)
