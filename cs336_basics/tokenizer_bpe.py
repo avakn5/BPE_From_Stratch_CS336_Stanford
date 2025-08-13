@@ -23,8 +23,8 @@ class BPE_Tokenizer():
         For the encoder you don't need to build a work frequency dict. Every computation is done at the word-level.'''
         
         list_integer = []
-    
         segments = []
+        
         # similar code segmentation than the training BPE implementation.
         if self.special_tokens:
             special_re = re.compile("(?V1)(" + "|".join(
