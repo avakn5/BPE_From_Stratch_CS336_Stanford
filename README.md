@@ -38,5 +38,5 @@ gunzip owt_valid.txt.gz
 * Encoder (text → token IDs).
 * Decoder (token IDs → text).
 * Passing all assignment tests:
-** BPE training: 3/3 tests passed
-** Tokenizer: 23/23 tests passed
+&nbsp;BPE training: 3/3 tests passed
+&nbsp; Tokenizer: 23/23 tests passed
