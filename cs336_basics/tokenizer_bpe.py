@@ -52,8 +52,6 @@ class BPE_Tokenizer():
                 segments.append(text[last:])
         else:
             segments = [text]
-
-
         
         for seg in segments: 
             if seg in self.special_tokens:
