@@ -156,8 +156,7 @@ class BPE():
             
             # e) append the merged pair to the merges list.
             self.merges.append(most_frequent_tuple)   
-            self.vocabulary[len(self.vocabulary)] = b"".join(most_frequent_tuple)
-                    
+            self.vocabulary[len(self.vocabulary)] = b"".join(most_frequent_tuple)          
         return self.vocabulary, self.merges
 
 def train(input_path: str, vocab_size: int, special_tokens: list[str] | None = None):
