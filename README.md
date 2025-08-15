@@ -1,6 +1,6 @@
 # CS336 Spring 2025 Assignment 1: BPE Implementation from Scratch
 
-This repository contains my implementation of Byte Pair Encoding (BPE) from scratch for CS336 — Spring 2025 Assignment 1, based on the provided assignment handout (cs336_spring2025_assignment1_basics.pdf).
+This repository contains my implementation of Byte Pair Encoding (BPE) from scratch for CS336 — Spring 2025 Assignment 1, based on the provided assignment handout (cs336_spring2025_assignment1_basics.pdf). Look at section 2 for BPE instructions.
 
 Byte Pair Encoding is a subword tokenization algorithm originally adapted for NLP by Sennrich et al., Neural Machine Translation of Rare Words with Subword Units (2016). It works by iteratively replacing the most frequent pair of symbols in the text with a new symbol, effectively building a vocabulary.
 
